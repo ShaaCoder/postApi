@@ -6,11 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "start-dev": "nodemon index.js",
-<<<<<<< HEAD
     "build": "",
-=======
-    "build":"",
->>>>>>> origin/main
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
