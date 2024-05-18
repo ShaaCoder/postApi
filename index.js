@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
     cb(null, "images");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Append unique timestamp to the file name
+    cb(null, Date.now() + path.extname(file.originalname));
   }
 });
 const upload = multer({ storage: storage });
@@ -29,17 +29,22 @@ const upload = multer({ storage: storage });
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URL, {
-      useNewUrlParser: true,
+      useUnifiedTopology: true
     });
     console.log("Database connection established successfully");
   } catch (err) {
-    console.log(err);
+    console.log("Error connecting to database:", err);
   }
 };
 
 // Image upload endpoint
 app.post("/api/upload", upload.single("file"), (req, res) => {
-  res.status(200).json("Image has been uploaded successfully");
+  try {
+    res.status(200).json("Image has been uploaded successfully");
+  } catch (err) {
+    console.error("Error during image upload:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 // Create a new post
@@ -54,7 +59,8 @@ app.post('/posts', upload.single('image'), async (req, res) => {
     const savedPost = await newPost.save();
     res.status(201).json(savedPost);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error("Error creating post:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -64,7 +70,8 @@ app.get('/posts', async (req, res) => {
     const posts = await Post.find();
     res.status(200).json(posts);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Error fetching posts:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -75,18 +82,23 @@ app.get('/posts/:id', async (req, res) => {
     if (!post) return res.status(404).json({ message: 'Post not found' });
     res.status(200).json(post);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Error fetching post:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // Update a post by ID
-app.put('/posts/:id', async (req, res) => {
+app.put('/posts/:id', upload.single('image'), async (req, res) => {
   try {
-    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const updatedData = req.file
+      ? { ...req.body, photo: `/images/${req.file.filename}` }
+      : req.body;
+    const updatedPost = await Post.findByIdAndUpdate(req.params.id, updatedData, { new: true, runValidators: true });
     if (!updatedPost) return res.status(404).json({ message: 'Post not found' });
     res.status(200).json(updatedPost);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error("Error updating post:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -97,7 +109,8 @@ app.delete('/posts/:id', async (req, res) => {
     if (!deletedPost) return res.status(404).json({ message: 'Post not found' });
     res.status(200).json({ message: 'Post deleted' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Error deleting post:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
