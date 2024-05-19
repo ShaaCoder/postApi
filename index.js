@@ -6,9 +6,11 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const Post = require('./models/Post');
 
 dotenv.config();
+
 console.log("Serving static files from:", path.join(__dirname, "/images"));
 app.use("/images", express.static(path.join(__dirname, "/images")));
 
@@ -42,8 +44,27 @@ const connectDB = async () => {
 
 // Image upload endpoint
 app.post("/api/upload", upload.single("file"), (req, res) => {
-  console.log("req.file")
+  console.log(req.file);
   res.status(200).json("Image has been uploaded successfully");
+});
+
+// Route to serve images directly by filename
+app.get('/images/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filepath = path.join(__dirname, 'images', filename);
+  res.sendFile(filepath);
+});
+
+// Route to get all images
+app.get('/images', (req, res) => {
+  const imagesDirectory = path.join(__dirname, 'images');
+  fs.readdir(imagesDirectory, (err, files) => {
+    if (err) {
+      return res.status(500).json({ message: 'Unable to scan files' });
+    }
+    const images = files.map(file => `/images/${file}`);
+    res.status(200).json(images);
+  });
 });
 
 // Create a new post
@@ -63,7 +84,7 @@ app.post('/posts', upload.single('image'), async (req, res) => {
 });
 
 // Get all posts
-app.get('/posts', async (req, res) => {
+app.get('/', async (req, res) => {
   try {
     const posts = await Post.find();
     res.status(200).json(posts);
